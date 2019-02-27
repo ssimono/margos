@@ -6,8 +6,11 @@ APPLET_FILE := /usr/share/mate-panel/applets/${APPLET_FQDN}.mate-panel-applet
 
 render := sed 's|@LOCATION|$(shell pwd)|g;s|@FQDN|${APPLET_FQDN}|g'
 
-dev-install: mate-files/*
-	$(render) mate-files/applet.ini > ${APPLET_FILE}
-	ln -s ${APPLET_FILE} mate-files/applet.ini.lnk
-	$(render) mate-files/dbus.ini > ${DBUS_SERVICE}
-	ln -s ${DBUS_SERVICE} mate-files/dbus.ini.lnk
+dev-install: desktop/*
+	$(render) desktop/applet.ini > ${APPLET_FILE}
+	ln -fs ${APPLET_FILE} desktop/applet.ini.lnk
+	$(render) desktop/dbus.ini > ${DBUS_SERVICE}
+	ln -fs ${DBUS_SERVICE} desktop/dbus.ini.lnk
+
+check:
+	black --check margos

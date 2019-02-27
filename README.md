@@ -27,4 +27,5 @@ Set up the development environment:
     pipenv install
     sudo make dev-install # Will copy global applet files to make the local applet available
 
-You can then start the service: `pipenv run ./margos-applet.py` and add the *Margos* applet to the panel (right click / Add to panel). The program will keep running until you removed all applets from the panel.
+You can then start the service: `pipenv run ./margos/main.py`.
+Now run `mate-panel-test-applet MatePanelAppletFactory::MatePanelApplet` on the side. It will display it in a test window. Alternatively you can add *Margos* to the panel for real (right click / Add to panel). The service will keep running until you removed all applets from the panel.
