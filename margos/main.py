@@ -6,6 +6,7 @@ import logging
 import asyncio
 import threading
 
+gi.require_version("Gtk", "2.0")
 gi.require_version("MatePanelApplet", "4.0")
 
 from gi.repository import MatePanelApplet
@@ -15,24 +16,29 @@ from gi.repository import GObject
 from worker import WorkerThread
 
 
-def onclick(widget):
-    logging.info("Clicked")
 
-
-class MargosButton(Gtk.Button):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+class MargosButton(Gtk.MenuBar):
+    def __init__(self):
+        super().__init__()
         self.sender_listener = None
+        self._bar_button = Gtk.MenuItem(label="Margos applet")
+        self.append(self._bar_button)
+
+        menu = Gtk.Menu()
+        menu.append(Gtk.MenuItem(label="First"))
+        menu.append(Gtk.MenuItem(label="Second"))
+        self._bar_button.set_submenu(menu)
 
     def on_render(self, sender, value):
-        self.set_label(value)
+        self._bar_button.set_label(value)
 
 
 def applet_fill(applet, sender):
-    button = MargosButton(label="Hello")
-    button.connect("clicked", onclick)
+    button = MargosButton()
+
     button.connect("destroy", sender.on_button_destroy)
     button.sender_listener = sender.connect("margos_render", button.on_render)
+
     applet.add(button)
 
     applet.show_all()
