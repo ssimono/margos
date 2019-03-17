@@ -18,8 +18,9 @@ from worker import WorkerThread
 
 
 class MargosButton(Gtk.MenuBar):
-    def __init__(self):
+    def __init__(self, cmd):
         super().__init__()
+        self.cmd = cmd
         self.sender_listener = None
         self._bar_button = Gtk.MenuItem(label="Margos applet")
         self.append(self._bar_button)
@@ -29,34 +30,46 @@ class MargosButton(Gtk.MenuBar):
         menu.append(Gtk.MenuItem(label="Second"))
         self._bar_button.set_submenu(menu)
 
-    def on_render(self, sender, value):
-        self._bar_button.set_label(value)
+    def on_render(self, sender, cmd, value):
+        if cmd == self.cmd:
+            self._bar_button.set_label(value)
 
 
-def applet_fill(applet, sender):
-    button = MargosButton()
-
-    button.connect("destroy", sender.on_button_destroy)
-    button.sender_listener = sender.connect("margos_render", button.on_render)
-
-    applet.add(button)
-
-    applet.show_all()
-    logging.info("Applet created {}".format(applet))
+i = 0
 
 
 def applet_factory(applet, iid, sender):
     if iid != "MargosApplet":
         return False
 
-    applet_fill(applet, sender)
+    global i
+
+    button = MargosButton(("date", "uptime", "fortune")[i])
+    applet.add(button)
+    sender.add_applet(button)
+    i += 1
+
+    applet.show_all()
+    logging.info("Applet created with command '{}'".format(button.cmd))
     return True
 
 
 class Sender(GObject.GObject):
+    def __init__(self):
+        super().__init__()
+        self.commands = set()
+
+    def add_applet(self, margos_button):
+        margos_button.sender_listener = sender.connect(
+            "margos_render", margos_button.on_render
+        )
+        margos_button.connect("destroy", self.on_button_destroy)
+        self.commands.add(margos_button.cmd)
+
     def on_button_destroy(self, margos_button):
         logging.info("Destroying the button")
         logging.info(margos_button.sender_listener)
+        self.commands.remove(margos_button.cmd)
         self.disconnect(margos_button.sender_listener)
 
 
@@ -66,7 +79,7 @@ GObject.signal_new(
     Sender,
     GObject.SignalFlags.RUN_FIRST,
     GObject.TYPE_NONE,
-    (GObject.TYPE_GSTRING,),
+    (GObject.TYPE_GSTRING, GObject.TYPE_GSTRING),
 )
 
 
