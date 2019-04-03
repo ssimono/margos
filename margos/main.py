@@ -1,12 +1,12 @@
 #! /usr/bin/env python3
 
-import gi
+from os import getenv, getpid
 import logging
-
 import asyncio
 import threading
+import gi
 
-gi.require_version("Gtk", "2.0")
+gi.require_version("Gtk", "3.0")
 gi.require_version("MatePanelApplet", "4.0")
 
 from gi.repository import MatePanelApplet
@@ -15,6 +15,8 @@ from gi.repository import GObject
 
 from worker import WorkerThread
 
+DEV = getenv("ENVIRONMENT", "prod") == "dev"
+IID = "MargosDevApplet" if DEV else "MargosApplet"
 
 
 class MargosButton(Gtk.MenuBar):
@@ -39,7 +41,7 @@ i = 0
 
 
 def applet_factory(applet, iid, sender):
-    if iid != "MargosApplet":
+    if iid != IID:
         return False
 
     global i
@@ -84,7 +86,8 @@ GObject.signal_new(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(message)s")
+    log_level = logging.DEBUG if DEV else logging.INFO
+    logging.basicConfig(level=log_level, format="[%(asctime)s] %(message)s")
 
     # Make sure that child thread gets an event loop
     asyncio.get_child_watcher().attach_loop(asyncio.get_event_loop())
@@ -93,15 +96,15 @@ if __name__ == "__main__":
     worker_thread = WorkerThread(asyncio.get_event_loop(), sender)
     worker_thread.start()
 
-    logging.info("MargosAppletFactory starting")
+    logging.info(f"{IID}Factory starting - pid {getpid()}")
     MatePanelApplet.Applet.factory_main(
-        "MargosAppletFactory",
+        f"{IID}Factory",
         MatePanelApplet.Applet.__gtype__,
         MatePanelApplet.Applet.__gtype__,
         applet_factory,
         sender,
     )
-    logging.info("MargosAppletFactory shutting down.")
+    logging.info(f"{IID}Factory shutting down.")
 
     worker_thread.drain()
     worker_thread.join()
