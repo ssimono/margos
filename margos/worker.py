@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from threading import Thread, Event
+from time import sleep as sync_sleep
 
 
 async def call_program(cmd):
@@ -24,37 +25,25 @@ async def consumer(cmd, queue):
     await queue.put(cmd_result)
 
 
-async def scheduler(render_bus, drain_flag):
-    # FIXME annoying that we need to wait for the first one
-    # Maybe wait before starting the scheduler with an Event flag
-    while len(render_bus.commands) == 0:
-        await asyncio.sleep(2)
-
+async def _worker(router):
     q = asyncio.Queue()
     running = set()
-    while not drain_flag.is_set():
-        for missing in render_bus.commands - running:
+    while len(router.schedules):
+        for missing in router.schedules - running:
             asyncio.create_task(consumer(missing, q))
             running.add(missing)
-        (cmd, result) = await q.get()
-        running.remove(cmd)
-        asyncio.get_event_loop().call_soon_threadsafe(
-            render_bus.emit, "margos_render", cmd, result
-        )
+        (schedule, result) = await q.get()
+        running.remove(schedule)
+        asyncio.get_event_loop().call_soon_threadsafe(router.render, schedule, result)
 
 
-class WorkerThread(Thread):
-    def __init__(self, loop, render_bus):
-        # Cannot pass extra args if I override run, so using another method as target
-        super().__init__(target=self.entrypoint, args=(loop, render_bus))
+def worker(loop, router):
+    logging.info("Worker started")
+    asyncio.set_event_loop(loop)
 
-        self.drain_flag = Event()
+    while not len(router.schedules):
+        logging.debug("Waiting for the first applet")
+        sync_sleep(1)
 
-    def entrypoint(self, loop, render_bus):
-        logging.info("Runner started")
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(scheduler(render_bus, self.drain_flag))
-        logging.info("Runner ended")
-
-    def drain(self):
-        self.drain_flag.set()
+    loop.run_until_complete(_worker(router))
+    logging.info("Worker ended")
