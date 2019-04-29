@@ -10,6 +10,8 @@ from gi.repository import Gtk
 from gi.repository import GObject
 
 
+logger = logging.getLogger('margos')
+
 i = 0
 
 
@@ -28,6 +30,7 @@ class MargosApplet(Gtk.MenuBar):
         self.connect("margos_render", self.on_render)
 
     def on_render(self, emitter, state):
+        logger.debug('rendering')
         self._bar_button.set_label(state)
 
 
