@@ -34,7 +34,7 @@ async def _worker(router):
             running.add(missing)
         (schedule, result) = await q.get()
         running.remove(schedule)
-        asyncio.get_event_loop().call_soon_threadsafe(router.render, schedule, result)
+        router.render(schedule, result)
 
 
 def worker(loop, router):
