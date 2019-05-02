@@ -8,6 +8,7 @@ gi.require_version("MatePanelApplet", "4.0")
 
 from gi.repository import MatePanelApplet
 from gi.repository import Gtk
+from gi.repository import Gdk
 from gi.repository import GLib
 
 
@@ -17,6 +18,9 @@ logger = logging.getLogger("margos")
 class MargosApplet(Gtk.MenuBar):
     def __init__(self):
         super().__init__()
+
+        self.connect("button_press_event", self.on_click)
+
         self._bar_button = Gtk.MenuItem(label="Margos applet")
         self.append(self._bar_button)
 
