@@ -1,0 +1,19 @@
+<schemalist>
+  <schema id="@APPLET_ID">
+    <key name="command" type="s">
+      <default>'date'</default>
+      <summary>Command to execute</summary>
+      <description>Command/script to execute to get the output</description>
+    </key>
+    <key name="interval" type="i">
+      <default>1</default>
+      <summary>Interval for the command</summary>
+      <description>Interval to execute the command (in seconds)</description>
+    </key>
+    <key name="applet-settings" type="s">
+      <default>'{}'</default>
+      <summary>Specific settings for the command</summary>
+      <description>Will be passed to the command as environment variables</description>
+    </key>
+  </schema>
+</schemalist>

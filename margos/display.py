@@ -6,11 +6,7 @@ from threading import Lock
 gi.require_version("Gtk", "3.0")
 gi.require_version("MatePanelApplet", "4.0")
 
-from gi.repository import MatePanelApplet
-from gi.repository import Gtk
-from gi.repository import Gdk
-from gi.repository import GLib
-
+from gi.repository import MatePanelApplet, Gtk, Gdk, GLib, Gio
 
 logger = logging.getLogger("margos")
 
@@ -44,22 +40,24 @@ class Router:
     def __init__(self):
         self._applets = {}
         self._lock = Lock()
-        self.i = 0
 
     def render(self, schedule, state):
         GLib.idle_add(lambda: self._applets.get(schedule).render(state))
 
     def make_applet(self, mate_applet, iid):
         new_applet = MargosApplet()
-        new_cmd = ("date", "uptime", "fortune")[self.i]
+
+        pref_path = mate_applet.get_preferences_path()
+        settings = Gio.Settings.new_with_path(f"fr.sa-web.{iid}", pref_path)
+        new_cmd = settings.get_string("command")
 
         new_applet.connect_data("destroy", self._on_applet_destroy, new_cmd)
 
         with self._lock:
             self._applets.update({new_cmd: new_applet})
 
-        logging.info("Applet created with command '{}'".format(new_cmd))
-        self.i += 1
+        logger.info(f"Applet created with command '{new_cmd}'")
+        logger.debug(f"Preference path is '{pref_path}'")
 
         mate_applet.add(new_applet)
         mate_applet.show_all()
@@ -72,12 +70,12 @@ class Router:
         return scheds
 
     def _on_applet_destroy(self, applet, cmd):
-        logging.info("Destroying the applet")
+        logger.info("Destroying the applet")
         self._applets.pop(cmd)
 
 
 def render_loop(iid, router):
-    logging.info(f"{iid}Factory starting - pid {getpid()}")
+    logger.info(f"{iid}Factory starting - pid {getpid()}")
     MatePanelApplet.Applet.factory_main(
         f"{iid}Factory", True, MatePanelApplet.Applet.__gtype__, router.make_applet
     )
