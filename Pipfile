@@ -8,6 +8,8 @@ name = "pypi"
 [packages]
 pygobject = "*"
 pgi = "*"
+mypy = "*"
+pyflakes = "*"
 
 [requires]
 python_version = "3.7"

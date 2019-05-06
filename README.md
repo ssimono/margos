@@ -32,6 +32,7 @@ Set up the development environment:
     pipenv install
     sudo make dev-install # Will copy global applet files to make the local applet available
     export ENVIRONMENT=dev # Use the development version of the applet
+    pipenv shell # Start a shell in a virtualenv
 
-You can then start the service: `pipenv run ./margos/main.py`.
+You can then start the service: `python -m margos.main`.
 Now run `make dev-show`. It will launch mate-applet debug tool to display your applet in a popup. Alternatively you can add *MargosDev* to the panel for real (right click / Add to panel). The service will keep running until you removed all applets from the panel.

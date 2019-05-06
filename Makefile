@@ -35,8 +35,12 @@ dev-clean:
 	rm -f desktop/*.lnk
 
 check:
+	mypy margos
+	pyflakes margos
 	black --check margos
 
+test:
+	python -m unittest
 
 package:
 	rm -rf build

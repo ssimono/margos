@@ -1,49 +1,68 @@
 import asyncio
 import logging
 
-from threading import Thread, Event
-from time import sleep as sync_sleep
+from asyncio import Queue
+
+from margos.models import (
+    AppletState,
+    AppletAdded,
+    AppletRemoved,
+    FactoryDown,
+    PanelEvent,
+    AppletConfig,
+    Renderer,
+)
+
+_Loop = asyncio.AbstractEventLoop
 
 
-async def call_program(cmd):
+async def _call_program(command: str) -> str:
     proc = await asyncio.create_subprocess_exec(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
 
-    logging.info(f"Calling '{cmd}'")
+    logging.info(f"Calling '{command}'")
     stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
-    await asyncio.sleep(2)
 
     if proc.returncode != 0:
-        return (cmd, f"Exited with code {proc.returncode}")
-    else:
-        return (cmd, stdout.decode("utf8"))
+        return f"Exited with code {proc.returncode}"
+    return stdout.decode("utf8")
 
 
-async def consumer(cmd, queue):
-    cmd_result = await call_program(cmd)
-    await queue.put(cmd_result)
+async def _command_interval(config: AppletConfig, callback: Renderer) -> None:
+    while True:
+        call_result = await _call_program(config.command)
+        await asyncio.sleep(config.interval)
+        callback(AppletState(call_result))
 
 
-async def _worker(router):
-    q = asyncio.Queue()
-    running = set()
-    while len(router.schedules):
-        for missing in router.schedules - running:
-            asyncio.create_task(consumer(missing, q))
-            running.add(missing)
-        (schedule, result) = await q.get()
-        running.remove(schedule)
-        router.render(schedule, result)
+async def schedule(applet_queue: "Queue[PanelEvent]") -> None:
+    """ Listen to PanelEvents and schedule shell commands to run at interval """
+    tasks = {}
+    while True:
+        event: PanelEvent = await applet_queue.get()
+        if isinstance(event, AppletAdded):
+            logging.info(f"Applet added: {event.id_}")
+            new_task = asyncio.create_task(
+                _command_interval(event.config, event.render)
+            )
+            tasks[event.id_] = new_task
+        elif isinstance(event, AppletRemoved):
+            logging.info(f"Applet removed: {event.id_}")
+            tasks[event.id_].cancel()
+        elif isinstance(event, FactoryDown):
+            break
 
 
-def worker(loop, router):
+def safe_put(loop: _Loop, queue: "asyncio.Queue[PanelEvent]", e: PanelEvent) -> None:
+    async def _put(e: PanelEvent) -> None:
+        return await queue.put(e)
+
+    asyncio.run_coroutine_threadsafe(_put(e), loop)
+
+
+def worker_thread(loop: _Loop, applet_queue: "asyncio.Queue[PanelEvent]") -> None:
     logging.info("Worker started")
     asyncio.set_event_loop(loop)
-
-    while not len(router.schedules):
-        logging.debug("Waiting for the first applet")
-        sync_sleep(1)
-
-    loop.run_until_complete(_worker(router))
+    loop.run_until_complete(schedule(applet_queue))
     logging.info("Worker ended")
