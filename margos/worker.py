@@ -1,11 +1,12 @@
 import asyncio
 import logging
 
-from asyncio import Queue
+from asyncio import Queue, CancelledError
 
 from margos.models import (
     AppletAdded,
     AppletRemoved,
+    ConfigUpdated,
     FactoryDown,
     PanelEvent,
     AppletConfig,
@@ -30,11 +31,14 @@ async def _call_program(command: str) -> str:
     return stdout.decode("utf8")
 
 
-async def _command_interval(config: AppletConfig, callback: Renderer) -> None:
-    while True:
-        call_result = await _call_program(config.command)
-        await asyncio.sleep(config.interval)
-        callback(parse(call_result))
+async def _command_interval(config: AppletConfig, callback: Renderer) -> Renderer:
+    try:
+        while True:
+            call_result = await _call_program(config.command)
+            await asyncio.sleep(config.interval)
+            callback(parse(call_result))
+    except CancelledError:
+        return callback
 
 
 async def schedule(applet_queue: "Queue[PanelEvent]") -> None:
@@ -44,13 +48,19 @@ async def schedule(applet_queue: "Queue[PanelEvent]") -> None:
         event: PanelEvent = await applet_queue.get()
         if isinstance(event, AppletAdded):
             logging.info(f"Applet added: {event.id_}")
-            new_task = asyncio.create_task(
+            tasks[event.id_] = asyncio.create_task(
                 _command_interval(event.config, event.render)
             )
-            tasks[event.id_] = new_task
         elif isinstance(event, AppletRemoved):
             logging.info(f"Applet removed: {event.id_}")
             tasks[event.id_].cancel()
+        elif isinstance(event, ConfigUpdated):
+            logging.info(f"Applet updated: {event.id_}")
+            tasks[event.id_].cancel()
+            render = await tasks[event.id_]
+            tasks[event.id_] = asyncio.create_task(
+                _command_interval(event.config, render)
+            )
         elif isinstance(event, FactoryDown):
             break
 

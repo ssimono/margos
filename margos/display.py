@@ -1,7 +1,9 @@
 import logging
 import gi  # type:ignore
 
-from typing import Optional
+from functools import partial
+from pkg_resources import resource_filename
+from typing import Dict, List, Optional, Tuple
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("MatePanelApplet", "4.0")
@@ -13,8 +15,10 @@ from margos.models import (
     AppletAdded,
     AppletRemoved,
     AppletState,
+    ConfigUpdated,
     FactoryDown,
     Notifier,
+    validate_applet_config,
 )
 
 logger = logging.getLogger("margos")
@@ -49,15 +53,86 @@ class MargosApplet(Gtk.MenuBar):
         GLib.idle_add(lambda: self._render(state))
 
 
+def _on_dialog_response(target: Gtk.Widget, response_type: int) -> None:
+    if response_type == int(Gtk.ResponseType.DELETE_EVENT):
+        target.close()
+
+
+def _pref_dialog(
+    mate_applet: MatePanelApplet.Applet, pref_btn: Gtk.Action, notify: Notifier
+) -> None:
+    builder = Gtk.Builder()
+    builder.add_from_file(
+        resource_filename("margos.resources", "preferences_dialog.xml")
+    )
+
+    def on_pref_apply(value_widgets: List[Gtk.Editable], apply_btn: Gtk.Widget) -> None:
+        values = {w.get_name(): w.get_text() for w in value_widgets}
+        new_config = validate_applet_config(**values)
+        if isinstance(new_config, AppletConfig):
+            if save_to_gsettings(mate_applet.get_preferences_path(), new_config):
+                notify(ConfigUpdated(id(mate_applet.get_child()), new_config))
+                apply_btn.get_ancestor(Gtk.Dialog).close()
+        else:
+            logging.error(new_config)  # TODO: display the error back
+
+    def on_pref_cancel(cancel_button: Gtk.Widget) -> None:
+        cancel_button.get_ancestor(Gtk.Dialog).close()
+
+    current_config = config_from_gsettings(mate_applet.get_preferences_path())
+    command_widget = builder.get_object("margos_command")
+    interval_widget = builder.get_object("margos_interval")
+
+    if current_config:
+        command_widget.set_text(current_config.command)
+        interval_widget.set_text(str(current_config.interval))
+
+    builder.connect_signals(
+        {
+            "on_pref_cancel": on_pref_cancel,
+            "on_pref_apply": partial(on_pref_apply, [command_widget, interval_widget]),
+        }
+    )
+    builder.get_object("pref_dialog").show_all()
+
+
 def _on_applet_destroy(applet: MargosApplet, notify: Notifier, id_: int) -> None:
     logger.info("Destroying the applet")
     notify(AppletRemoved(id_))
 
 
+def _make_action_group(
+    mate_applet: MatePanelApplet.Applet, notify: Notifier
+) -> Tuple[str, Gtk.ActionGroup]:
+    actions = [
+        (
+            "PrefsAction",
+            Gtk.STOCK_PROPERTIES,
+            "Preferences",
+            None,
+            None,
+            partial(_pref_dialog, mate_applet),
+        )
+    ]
+
+    action_group = Gtk.ActionGroup("applet_config")
+    action_group.add_actions(actions, notify)
+
+    xml = "\n".join(
+        [f'<menuitem action="{a.get_name()}" />' for a in action_group.list_actions()]
+    )
+
+    return (xml, action_group)
+
+
 def _applet_factory(
     mate_applet: MatePanelApplet.Applet, iid: str, notify: Notifier
 ) -> bool:
-    config = config_from_gsettings(mate_applet.get_preferences_path())
+    if "Margos" not in iid:
+        return False
+
+    pref_path = mate_applet.get_preferences_path()
+    config = config_from_gsettings(pref_path)
     if config is None:
         return False
 
@@ -67,10 +142,12 @@ def _applet_factory(
     new_applet.connect_data("destroy", _on_applet_destroy, notify, id_)
 
     mate_applet.add(new_applet)
+    mate_applet.setup_menu(*_make_action_group(mate_applet, notify))
     mate_applet.show_all()
-    notify(AppletAdded(id_, config, new_applet.render))
 
+    notify(AppletAdded(id_, config, new_applet.render))
     logger.info(f"Applet created with command '{config.command}'")
+
     return True
 
 
@@ -97,3 +174,15 @@ def config_from_gsettings(pref_path: str) -> Optional[AppletConfig]:
         )
     except TypeError:
         return None
+
+
+def save_to_gsettings(pref_path: str, config: AppletConfig) -> bool:
+    """ Save an applet configuration to gsettings """
+    try:
+        settings = Gio.Settings.new_with_path("fr.sa-web.MargosDevApplet", pref_path)
+        settings.set_string("command", config.command)
+        settings.set_int("interval", config.interval)
+        return True
+    except Exception as e:
+        logging.error(e)
+        return False

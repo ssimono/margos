@@ -26,7 +26,6 @@ dev-install: desktop/*
 
 dev-show: APPLET_NAME=MargosDev
 dev-show:
-	gsettings set ${APPLET_ID}:/tmp/ command 'uptime'
 	mate-panel-test-applets --iid ${APPLET_NAME}AppletFactory::${APPLET_NAME}Applet --prefs-path /tmp/
 .PHONY: dev-show
 
