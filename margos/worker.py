@@ -4,7 +4,6 @@ import logging
 from asyncio import Queue
 
 from margos.models import (
-    AppletState,
     AppletAdded,
     AppletRemoved,
     FactoryDown,
@@ -12,6 +11,8 @@ from margos.models import (
     AppletConfig,
     Renderer,
 )
+
+from margos.parsing import parse
 
 _Loop = asyncio.AbstractEventLoop
 
@@ -33,7 +34,7 @@ async def _command_interval(config: AppletConfig, callback: Renderer) -> None:
     while True:
         call_result = await _call_program(config.command)
         await asyncio.sleep(config.interval)
-        callback(AppletState(call_result))
+        callback(parse(call_result))
 
 
 async def schedule(applet_queue: "Queue[PanelEvent]") -> None:
