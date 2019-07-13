@@ -3,7 +3,7 @@ import gi  # type:ignore
 
 from functools import partial
 from pkg_resources import resource_filename
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("MatePanelApplet", "4.0")
@@ -31,12 +31,8 @@ class MargosApplet(Gtk.MenuBar):
         self.connect("button_press_event", self.on_click)
 
         self._bar_button = Gtk.MenuItem(label="Margos applet")
+        self._bar_button.set_submenu(Gtk.Menu())
         self.append(self._bar_button)
-
-        menu = Gtk.Menu()
-        menu.append(Gtk.MenuItem(label="First"))
-        menu.append(Gtk.MenuItem(label="Second"))
-        self._bar_button.set_submenu(menu)
 
     def on_click(self, target: Gtk.Widget, event: Gdk.Event) -> bool:
         if event.button == Gdk.BUTTON_SECONDARY:
@@ -48,6 +44,23 @@ class MargosApplet(Gtk.MenuBar):
     def _render(self, state: AppletState) -> None:
         logger.debug("rendering")
         self._bar_button.set_label(state.header)
+        menu = self._bar_button.get_submenu()
+        menuItems = menu.get_children()
+
+        # Update current items
+        for (line, menuItem) in zip(state.menu, menuItems):
+            menuItem.set_label(line)
+
+        # Add missing items
+        for line in state.menu[len(menuItems) :]:
+            print(f"adding {line}")
+            new_item = Gtk.MenuItem(label=line)
+            menu.append(new_item)
+            new_item.show()
+
+        # Remove extra items
+        for item in menuItems[len(state.menu) :]:
+            menu.remove(item)
 
     def render(self, state: AppletState) -> None:
         GLib.idle_add(lambda: self._render(state))

@@ -19,7 +19,7 @@ _Loop = asyncio.AbstractEventLoop
 
 
 async def _call_program(command: str) -> str:
-    proc = await asyncio.create_subprocess_exec(
+    proc = await asyncio.create_subprocess_shell(
         command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
 
