@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from asyncio import Queue, CancelledError
+from asyncio import Queue, CancelledError, ensure_future
 
 from margos.models import (
     AppletAdded,
@@ -16,6 +16,9 @@ from margos.models import (
 from margos.parsing import parse
 
 _Loop = asyncio.AbstractEventLoop
+
+# Use Python3.7 naming
+create_task = ensure_future
 
 
 async def _call_program(command: str) -> str:
@@ -48,7 +51,7 @@ async def schedule(applet_queue: "Queue[PanelEvent]") -> None:
         event: PanelEvent = await applet_queue.get()
         if isinstance(event, AppletAdded):
             logging.info(f"Applet added: {event.id_}")
-            tasks[event.id_] = asyncio.create_task(
+            tasks[event.id_] = create_task(
                 _command_interval(event.config, event.render)
             )
         elif isinstance(event, AppletRemoved):
@@ -58,9 +61,7 @@ async def schedule(applet_queue: "Queue[PanelEvent]") -> None:
             logging.info(f"Applet updated: {event.id_}")
             tasks[event.id_].cancel()
             render = await tasks[event.id_]
-            tasks[event.id_] = asyncio.create_task(
-                _command_interval(event.config, render)
-            )
+            tasks[event.id_] = create_task(_command_interval(event.config, render))
         elif isinstance(event, FactoryDown):
             break
 

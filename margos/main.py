@@ -1,23 +1,28 @@
 #! /usr/bin/env python3
 
 import logging
-from os import getenv
+import sys
 from asyncio import get_event_loop, get_child_watcher, Queue
 from functools import partial
 from threading import Thread
 
+from margos.system import conf, install, uninstall
 from margos.models import PanelEvent
 from margos.display import render_loop
 from margos.worker import safe_put, worker_thread
 
-DEV = getenv("ENVIRONMENT", "prod") == "dev"
-IID = "MargosDevApplet" if DEV else "MargosApplet"
-
 logger = logging.getLogger("margos")
 
 
-if __name__ == "__main__":
-    log_level = logging.DEBUG if DEV else logging.INFO
+def main() -> None:
+    if len(sys.argv) >= 2:
+        cmd = sys.argv[1]
+        if cmd == "install":
+            sys.exit(install())
+        elif cmd == "uninstall":
+            sys.exit(uninstall())
+
+    log_level = logging.DEBUG if conf.env == "dev" else logging.INFO
     logging.basicConfig(
         level=log_level, format="[%(asctime)s] %(threadName)s - %(message)s"
     )
@@ -31,5 +36,9 @@ if __name__ == "__main__":
     worker = Thread(target=worker_thread, name="Worker", args=(loop, applet_queue))
 
     worker.start()
-    render_loop(IID, partial(safe_put, loop, applet_queue))
+    render_loop(partial(safe_put, loop, applet_queue))
     worker.join()
+
+
+if __name__ == "__main__":
+    main()

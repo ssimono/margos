@@ -10,6 +10,7 @@ gi.require_version("MatePanelApplet", "4.0")
 
 from gi.repository import MatePanelApplet, Gtk, Gdk, GLib, Gio  # type:ignore
 
+from margos.system import conf
 from margos.models import (
     AppletConfig,
     AppletAdded,
@@ -141,7 +142,7 @@ def _make_action_group(
 def _applet_factory(
     mate_applet: MatePanelApplet.Applet, iid: str, notify: Notifier
 ) -> bool:
-    if "Margos" not in iid:
+    if iid != conf.applet_name:
         return False
 
     pref_path = mate_applet.get_preferences_path()
@@ -164,23 +165,23 @@ def _applet_factory(
     return True
 
 
-def render_loop(iid: str, notify: Notifier) -> None:
-    logger.info(f"{iid}Factory starting")
+def render_loop(notify: Notifier) -> None:
+    logger.info(f"{conf.name} starting")
     MatePanelApplet.Applet.factory_main(
-        factory_id=f"{iid}Factory",
+        factory_id=conf.factory_name,
         out_process=True,
         applet_type=MatePanelApplet.Applet.__gtype__,
         callback=_applet_factory,
         data=notify,
     )
     notify(FactoryDown())
-    logging.info(f"{iid}Factory shutting down.")
+    logging.info(f"{conf.name} shutting down.")
 
 
 def config_from_gsettings(pref_path: str) -> Optional[AppletConfig]:
     """ Load an applet configuration from its preference path """
     try:
-        settings = Gio.Settings.new_with_path("fr.sa-web.MargosDevApplet", pref_path)
+        settings = Gio.Settings.new_with_path(conf.applet_fullname, pref_path)
         return AppletConfig(
             command=settings.get_string("command"),
             interval=settings.get_int("interval"),
@@ -192,7 +193,7 @@ def config_from_gsettings(pref_path: str) -> Optional[AppletConfig]:
 def save_to_gsettings(pref_path: str, config: AppletConfig) -> bool:
     """ Save an applet configuration to gsettings """
     try:
-        settings = Gio.Settings.new_with_path("fr.sa-web.MargosDevApplet", pref_path)
+        settings = Gio.Settings.new_with_path(conf.applet_fullname, pref_path)
         settings.set_string("command", config.command)
         settings.set_int("interval", config.interval)
         return True

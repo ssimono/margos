@@ -1,8 +1,7 @@
 Margos
 ======
 
-Clone (attempt) of Bitbar/Argos for Mate Desktop. It can create dynamic mate-panel applets
-from the output of your own scripts.
+Create dynamic Mate Panel applets very easily from the text output of your own scripts! This is a work-in-progress clone of Bitbar/Argos for Mate Desktop.
 
 Check out the family
 --------------------
@@ -11,28 +10,34 @@ Check out the family
 - [Argos](https://github.com/p-e-w/argos) for Gnome Shell
 - [Kargos](https://github.com/lipido/kargos) For KDE Plasma
 
-The aim of Margos is to stay as close as possible to the API shared by the above projects, so all plugins made for one can work with the others.
+Margos allows you to create desktop applet on Mate, that you can put anywhere on the panel(s) and configure directly with gconf the same way other applets are configured. It therefore ignores meta-information based on script name. It is far from being done, but already outperforming the native mate command applet.
+
+Progress
+--------
+
+- [x] Show command output on the panel
+- [x] Refresh every x seconds
+- [x] Display a list from further lines of output
+- [ ] Unlimited recursive submenus
+- [ ] Rotation of lines above `---`
+- [ ] Line attributes and all subsequent features
 
 Compatibility
 -------------
 
-Margos currently requires mate >= 1.18, i.e mate-panel migrated to gtk-3. Run `mate-about --version` to check your current version
+Margos currently requires mate >= 1.18, i.e mate-panel migrated to gtk-3. Run `mate-about --version` to check your current version.
+You will also need Python 3.6+ and pip3 on your system.
 
-Development
------------
+Installation
+------------
 
-Requirements:
+1. `sudo pip3 install -U --system margos`
+2. `sudo margos install` to make the applet available to the desktop
+3. `killall mate-panel` to restart the panel
 
-- Python 3.7+
-- pipenv
+To uninstall, make sure to clean the system files with `sudo margos uninstall` before removing the python package with pip3.
 
-Set up the development environment:
+Usage
+-----
 
-    git clone https://github.com/ssimono/margos.git
-    pipenv install
-    sudo make dev-install # Will copy global applet files to make the local applet available
-    export ENVIRONMENT=dev # Use the development version of the applet
-    pipenv shell # Start a shell in a virtualenv
-
-You can then start the service: `python -m margos.main`.
-Now run `make dev-show`. It will launch mate-applet debug tool to display your applet in a popup. Alternatively you can add *MargosDev* to the panel for real (right click / Add to panel). The service will keep running until you removed all applets from the panel.
+Once installed, simply add a new Margos applet on your panel. You can then right-click and set the command you wish to run in the "preferences" menu.

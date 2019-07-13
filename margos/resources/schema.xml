@@ -1,5 +1,5 @@
 <schemalist>
-  <schema id="@APPLET_ID">
+  <schema id="{conf.applet_fullname}">
     <key name="command" type="s">
       <default>'date'</default>
       <summary>Command to execute</summary>
@@ -11,7 +11,7 @@
       <description>Interval to execute the command (in seconds)</description>
     </key>
     <key name="applet-settings" type="s">
-      <default>'{}'</default>
+      <default>'{{}}'</default>
       <summary>Specific settings for the command</summary>
       <description>Will be passed to the command as environment variables</description>
     </key>
