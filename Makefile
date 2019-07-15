@@ -9,3 +9,8 @@ check:
 
 test:
 	python3 -m unittest
+
+pypi:
+	rm -rf dist
+	./setup.py sdist
+	twine upload --repository-url https://upload.pypi.org/legacy/ dist/Margos-*.tar.gz

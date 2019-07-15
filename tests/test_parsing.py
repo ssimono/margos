@@ -12,7 +12,7 @@ class TestParse(unittest.TestCase):
     def test_full(self) -> None:
         state = parse(
             """Hello world
-This is line 1
+This is line 1|attr1 = 3 | attr2 = Hello
 
 This is line 2
 And line 3"""

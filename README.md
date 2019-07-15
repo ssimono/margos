@@ -1,6 +1,8 @@
 Margos
 ======
 
+[![PyPI version](https://img.shields.io/pypi/v/margos.svg)](https://pypi.org/project/margos/)
+
 Create dynamic Mate Panel applets very easily from the text output of your own scripts! This is a work-in-progress clone of Bitbar/Argos for Mate Desktop.
 
 Check out the family
@@ -10,7 +12,7 @@ Check out the family
 - [Argos](https://github.com/p-e-w/argos) for Gnome Shell
 - [Kargos](https://github.com/lipido/kargos) For KDE Plasma
 
-Margos allows you to create desktop applet on Mate, that you can put anywhere on the panel(s) and configure directly with gconf the same way other applets are configured. It therefore ignores meta-information based on script name. It is far from being done, but already outperforming the native mate command applet.
+Margos allows you to create desktop applets that you can put anywhere on the panel(s) and configure directly with gconf the same way other applets are configured. It therefore ignores meta-information based on script name. It is far from being done, but already outperforming the native mate command applet.
 
 Progress
 --------
@@ -41,3 +43,5 @@ Usage
 -----
 
 Once installed, simply add a new Margos applet on your panel. You can then right-click and set the command you wish to run in the "preferences" menu.
+
+Full usage will come once the feature set gets decent
